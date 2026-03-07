@@ -3,11 +3,11 @@ title: "Ceratitis field experiment .Rmd script"
 author: "Mariano Ordano"
 date: "3 March 2026"
 output:
+  word_document: default
+  html_document: default
   pdf_document:
     latex_engine: xelatex
     keep_tex: false
-  html_document: default
-  word_document: default
 editor_options: 
   chunk_output_type: console
 ---
@@ -291,8 +291,30 @@ sc$treatment <- factor(sc$treatment,
 
 library(multcompView)
 letras_tukey <- multcompLetters4(pbeneficio, tb)
-mis_letras <- letras_tukey$treatment$Letters
+#mis_letras <- letras_tukey$treatment$Letters
 
+# Extraer letras en orden según medias
+# Calcular medias por tratamiento
+medias_tratamiento <- tapply(sc$pbenef, sc$treatment, mean, na.rm = TRUE)
+
+# Crear data frame con tratamientos, medias y letras
+datos_letras <- data.frame(
+  treatment = names(medias_tratamiento),
+  media = as.numeric(medias_tratamiento),
+  letra = letras_tukey$treatment$Letters[names(medias_tratamiento)]
+)
+
+# Ordenar según el orden de los niveles del factor para el boxplot
+datos_letras <- datos_letras[match(levels(sc$treatment), datos_letras$treatment), ]
+
+# Extraer letras en el orden correcto
+mis_letras <- datos_letras$letra
+
+# Verificar orden
+cat("\nOrden de tratamientos y letras:\n")
+print(datos_letras)
+
+# boxplot
 bp <- boxplot(pbenef~droplevels(treatment), data=subset(sc, treatment %in%  c('Control','BC','SIT','SITBC')),col=c("gray","green","cyan","violet"), xlab ="Treatments", ylab="Proportion of Benefit", las=1,main="", cex.lab=1.5, cex.axis=1.5, pars=list(boxwex=0.6,staplewex=0.5,outwex=0.5),
                ylim = c(min(sc$pbenef), max(sc$pbenef) * 1.15))
 
@@ -362,12 +384,48 @@ atabla_word
 ```{r chunk17, message=F, warning=F, include=T}
 #17
 library(gdata)
+library(multcompView)
+
 levels(dfa$treatment)
 
-library(multcompView)
-letras_tukey <- multcompLetters4(a1, ta)
-mis_letras <- letras_tukey$treatment$Letters
+# Filtrar NAs antes
+dfa_clean <- dfa[!is.na(dfa$eAbbott), ]
 
+# Obtener letras de Tukey
+letras_tukey <- multcompLetters4(a1, ta)
+#mis_letras <- letras_tukey$treatment$Letters
+
+medias_tratamiento <- tapply(dfa_clean$eAbbott, dfa_clean$treatment, mean, na.rm = TRUE)
+
+# Eliminar NAs del vector de medias
+medias_tratamiento <- medias_tratamiento[!is.na(medias_tratamiento)]
+
+# Crear data frame con tratamientos, medias y letras
+datos_letras <- data.frame(
+  treatment = names(medias_tratamiento),
+  media = as.numeric(medias_tratamiento),
+  letra = letras_tukey$treatment$Letters[names(medias_tratamiento)],
+  stringsAsFactors = FALSE
+)
+
+# Ordenar según el orden de los niveles del factor para el boxplot
+# Filtrar solo los tratamientos que existen en datos_letras
+tratamientos_disponibles <- levels(dfa_clean$treatment)[levels(dfa_clean$treatment) %in% datos_letras$treatment]
+datos_letras <- datos_letras[match(tratamientos_disponibles, datos_letras$treatment), ]
+
+# Eliminar filas con NA si las hubiera
+datos_letras <- datos_letras[complete.cases(datos_letras), ]
+
+# Extraer letras en el orden correcto
+mis_letras <- datos_letras$letra
+
+# Verificar orden
+cat("\nOrden de tratamientos y letras (Abbott's effectiveness):\n")
+print(datos_letras)
+cat("\nNúmero de letras:", length(mis_letras), "\n")
+cat("Número de grupos en boxplot:", length(unique(dfa_clean$treatment)), "\n")
+
+# boxplot
 bpa <- boxplot(eAbbott~droplevels(treatment), data=subset(dfa, treatment %in%  c('BC','SIT','SITBC')),col=c("green","cyan","violet"), xlab ="Treatments", ylab="Effectiveness", las=1,main="", cex.lab=1.5, cex.axis=1.5, pars=list(boxwex=0.6,staplewex=0.5,outwex=0.5),
                ylim = c(min(dfa$eAbbott), max(dfa$eAbbott) * 1.15))
 
@@ -386,7 +444,7 @@ text(x = 1:4,
 
 ### Version
 
-20260305 Mariano Ordano maordano\@lillo.org.ar
+20260307 Mariano Ordano maordano\@lillo.org.ar
 
 ### AI use
 
